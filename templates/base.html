@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Generate Entity-Relationship diagrams from SQL DDL statements">
+    <title>{% block title %}ER Diagram Generator{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/theme/nord.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-project-diagram"></i>
+                <h1>SQL to ER Diagram Generator</h1>
+            </div>
+            <nav>
+                <a href="{{ url_for('index') }}" class="nav-link"><i class="fas fa-home"></i> Home</a>
+                <a href="#" id="help-btn" class="nav-link"><i class="fas fa-question-circle"></i> Help</a>
+                <a href="https://github.com/Mahmoud-Khawaja" class="nav-link" target="_blank"><i class="fab fa-github"></i> GitHub</a>
+            </nav>
+        </div>
+    </header>
+    
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="notifications">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <div class="alert-icon">
+                                <i class="fas {% if category == 'error' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i>
+                            </div>
+                            <div class="alert-message">{{ message }}</div>
+                            <button class="alert-close"><i class="fas fa-times"></i></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 ER Diagram Generator | Designed By Mahmoud Khawaja</p>
+            <div class="footer-links">
+            </div>
+        </div>
+    </footer>
+
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>How to Use This Tool</h2>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <h3>Getting Started</h3>
+                <p>This tool converts SQL CREATE TABLE statements into Entity-Relationship diagrams.</p>
+                
+                <h3>Features</h3>
+                <ul>
+                    <li>Support for multiple SQL dialects</li>
+                    <li>Automatic relationship detection</li>
+                    <li>Primary and foreign key visualization</li>
+                    <li>Interactive diagram controls</li>
+                </ul>
+                
+                <h3>Tips</h3>
+                <p>For best results, include primary and foreign key declarations in your SQL.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.3/mode/sql/sql.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,16 @@
+Flask
+Werkzeug
+Jinja2
+itsdangerous
+click
+
+graphviz
+pydot
+pyparsing
+
+simple-ddl-parser
+sqlparse
+
+markupsafe
+python-dateutil
+six

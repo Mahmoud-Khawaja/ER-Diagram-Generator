@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+
+{% block title %}SQL to ER Diagram Generator{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h2><i class="fas fa-database"></i> Generate ER Diagram</h2>
+        <p>Paste your SQL CREATE TABLE statements below and convert them to an Entity-Relationship diagram.</p>
+        
+        <form method="post" action="{{ url_for('index') }}" id="sql-form">
+            <div class="form-group">
+                <div class="editor-header">
+                    <label for="sql_text">SQL Code:</label>
+                    <div class="editor-controls">
+                        <button type="button" class="control-btn" id="format-btn" title="Format SQL">
+                            <i class="fas fa-align-left"></i>
+                        </button>
+                        <button type="button" class="control-btn" id="copy-btn" title="Copy SQL">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button type="button" class="control-btn" id="clear-btn" title="Clear">
+                            <i class="fas fa-eraser"></i>
+                        </button>
+                    </div>
+                </div>
+                <textarea name="sql_text" id="sql_text" rows="15">{{ sql_text if sql_text else '' }}</textarea>
+            </div>
+            
+            <div class="options-panel">
+                <h3>Diagram Options</h3>
+                <div class="options-grid">
+                    <div class="option-group">
+                        <label for="orientation">Layout:</label>
+                        <select name="orientation" id="orientation">
+                            <option value="LR">Left to Right</option>
+                            <option value="TB">Top to Bottom</option>
+                            <option value="RL">Right to Left</option>
+                            <option value="BT">Bottom to Top</option>
+                        </select>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="engine">Rendering Engine:</label>
+                        <select name="engine" id="engine">
+                            <option value="graphviz">Graphviz (Better Styling)</option>
+                            <option value="pydot">PyDot (Alternative)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label for="format">Format:</label>
+                        <select name="format" id="format">
+                            <option value="png">PNG Image</option>
+                            <option value="svg">SVG Vector</option>
+                            <option value="pdf">PDF Document</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="generate-btn">
+                    <i class="fas fa-magic"></i> Generate Diagram
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h2><i class="fas fa-lightbulb"></i> Example SQL</h2>
+        <div class="example-tabs">
+            <button class="tab-btn active" data-example="blog">Blog System</button>
+            <button class="tab-btn" data-example="ecommerce">E-Commerce</button>
+            <button class="tab-btn" data-example="medical">Healthcare</button>
+            <button class="tab-btn" data-example="university">University</button>
+        </div>
+        
+        <div class="example-content">
+            <div class="example-actions">
+                <button class="btn btn-sm" id="load-example">Load Example</button>
+            </div>
+            <pre class="example-code" id="example-preview">-- Select an example above to view the SQL</pre>
+        </div>
+    </div>
+</div>
+
+<div id="loading-overlay" style="display: none;">
+    <div class="spinner"></div>
+    <p>Generating diagram...</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const examples = {
+        blog: `CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE posts (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    published_at TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE comments (
+    id SERIAL PRIMARY KEY,
+    content TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    post_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (post_id) REFERENCES posts(id)
+);`,
+        ecommerce: `CREATE TABLE customers (
+    customer_id SERIAL PRIMARY KEY,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    address TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    stock_quantity INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL,
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) NOT NULL,
+    total DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+);
+
+CREATE TABLE order_items (
+    order_id INTEGER,
+    product_id INTEGER,
+    quantity INTEGER NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    PRIMARY KEY (order_id, product_id),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);`,
+        medical: `CREATE TABLE patients (
+    patient_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    birth_date DATE NOT NULL,
+    gender VARCHAR(10),
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    address TEXT
+);
+
+CREATE TABLE doctors (
+    doctor_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    specialty VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    phone VARCHAR(20)
+);
+
+CREATE TABLE appointments (
+    appointment_id SERIAL PRIMARY KEY,
+    patient_id INTEGER NOT NULL,
+    doctor_id INTEGER NOT NULL,
+    appointment_date TIMESTAMP NOT NULL,
+    reason TEXT,
+    status VARCHAR(20) NOT NULL,
+    FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(doctor_id)
+);
+
+CREATE TABLE medical_records (
+    record_id SERIAL PRIMARY KEY,
+    patient_id INTEGER NOT NULL,
+    doctor_id INTEGER NOT NULL,
+    diagnosis TEXT NOT NULL,
+    treatment TEXT,
+    record_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(patient_id),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(doctor_id)
+);`,
+        university: `CREATE TABLE departments (
+    dept_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    budget DECIMAL(12, 2)
+);
+
+CREATE TABLE professors (
+    professor_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    department_id INTEGER NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    FOREIGN KEY (department_id) REFERENCES departments(dept_id)
+);
+
+CREATE TABLE courses (
+    course_id SERIAL PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    department_id INTEGER NOT NULL,
+    credits INTEGER NOT NULL,
+    professor_id INTEGER NOT NULL,
+    FOREIGN KEY (department_id) REFERENCES departments(dept_id),
+    FOREIGN KEY (professor_id) REFERENCES professors(professor_id)
+);
+
+CREATE TABLE students (
+    student_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    major_id INTEGER,
+    FOREIGN KEY (major_id) REFERENCES departments(dept_id)
+);
+
+CREATE TABLE enrollments (
+    student_id INTEGER,
+    course_id INTEGER,
+    semester VARCHAR(20) NOT NULL,
+    grade VARCHAR(2),
+    PRIMARY KEY (student_id, course_id, semester),
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (course_id) REFERENCES courses(course_id)
+);`
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const editor = CodeMirror.fromTextArea(document.getElementById('sql_text'), {
+            mode: 'text/x-sql',
+            theme: 'nord',
+            lineNumbers: true,
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            indentWithTabs: false,
+            indentUnit: 4,
+            lineWrapping: true,
+            tabSize: 4,
+            extraKeys: {"Ctrl-Space": "autocomplete"},
+            hintOptions: {tables: {}}
+        });
+        
+        function updateEditorHeight() {
+            const height = Math.max(300, Math.min(600, window.innerHeight * 0.4));
+            editor.setSize(null, height);
+        }
+        updateEditorHeight();
+        window.addEventListener('resize', updateEditorHeight);
+        
+        let currentExample = 'blog';
+        document.getElementById('example-preview').textContent = examples.blog;
+        
+        document.querySelectorAll('.tab-btn').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                currentExample = this.dataset.example;
+                document.getElementById('example-preview').textContent = examples[currentExample];
+            });
+        });
+        
+        document.getElementById('load-example').addEventListener('click', function() {
+            editor.setValue(examples[currentExample]);
+            editor.focus();
+        });
+        
+        document.getElementById('format-btn').addEventListener('click', function() {
+            const sql = editor.getValue();
+            const formatted = sql.replace(/\(\s*/g, '(')
+                               .replace(/\s*\)/g, ')')
+                               .replace(/\s*,\s*/g, ', ')
+                               .replace(/\s*;\s*/g, ';\n\n')
+                               .replace(/CREATE TABLE/gi, '\nCREATE TABLE')
+                               .replace(/\s*\n\s*/g, '\n');
+            editor.setValue(formatted);
+        });
+        
+        document.getElementById('copy-btn').addEventListener('click', function() {
+            navigator.clipboard.writeText(editor.getValue())
+                .then(() => alert('SQL copied to clipboard!'));
+        });
+        
+        document.getElementById('clear-btn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear the editor?')) {
+                editor.setValue('');
+                editor.focus();
+            }
+        });
+        
+        document.getElementById('sql-form').addEventListener('submit', function() {
+            editor.save();
+            
+            document.getElementById('loading-overlay').style.display = 'flex';
+        });
+        
+        const modal = document.getElementById('help-modal');
+        document.getElementById('help-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            modal.style.display = 'block';
+        });
+        
+        document.querySelector('.modal-close').addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+        
+        window.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Generated ER Diagram{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="diagram-card">
+        <div class="diagram-header">
+            <h2><i class="fas fa-project-diagram"></i> Generated ER Diagram</h2>
+            <div class="diagram-meta">
+                <span><i class="fas fa-calendar"></i> Generated: {{ now.strftime('%Y-%m-%d %H:%M') if now else 'Today' }}</span>
+                <span><i class="fas fa-table"></i> Tables: {{ tables_count|default('0') }}</span>
+                <span><i class="fas fa-link"></i> Relationships: {{ relationships_count|default('0') }}</span>
+            </div>
+        </div>
+        
+        <div class="diagram-viewer" id="diagram-container">
+            <img src="{{ diagram_url }}" alt="ER Diagram" id="diagram-image">
+            
+            <div class="diagram-controls">
+                <button class="control-btn" id="zoom-in" title="Zoom In"><i class="fas fa-search-plus"></i></button>
+                <button class="control-btn" id="zoom-out" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+                <button class="control-btn" id="reset-zoom" title="Reset View"><i class="fas fa-sync-alt"></i></button>
+                <button class="control-btn" id="fullscreen" title="Fullscreen"><i class="fas fa-expand"></i></button>
+            </div>
+        </div>
+        
+        <div class="action-area">
+            <div class="action-buttons">
+                <a href="{{ url_for('download_file', filename=download_name) }}" class="btn btn-primary" download>
+                    <i class="fas fa-download"></i> Download Diagram
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                    <i class="fas fa-plus"></i> New Diagram
+                </a>
+                <button id="edit-sql-btn" class="btn btn-outline">
+                    <i class="fas fa-edit"></i> Edit SQL
+                </button>
+            </div>
+            
+            <div class="share-area">
+                <span>Share:</span>
+                <button class="share-btn" title="Copy Link"><i class="fas fa-link"></i></button>
+                <button class="share-btn" title="Share on Twitter"><i class="fab fa-twitter"></i></button>
+                <button class="share-btn" title="Share on LinkedIn"><i class="fab fa-linkedin"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="edit-form" action="{{ url_for('index') }}" method="post" style="display: none;">
+    <input type="hidden" name="sql_text" id="saved-sql" value="{{ sql_text|default('') }}">
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Image zoom functionality
+        const image = document.getElementById('diagram-image');
+        const container = document.getElementById('diagram-container');
+        let scale = 1;
+        let panning = false;
+        let pointX = 0;
+        let pointY = 0;
+        let start = { x: 0, y: 0 };
+        
+        document.getElementById('zoom-in').addEventListener('click', function() {
+            scale *= 1.2;
+            image.style.transform = `scale(${scale})`;
+        });
+        
+        document.getElementById('zoom-out').addEventListener('click', function() {
+            scale /= 1.2;
+            if (scale < 0.5) scale = 0.5;
+            image.style.transform = `scale(${scale})`;
+        });
+        
+        document.getElementById('reset-zoom').addEventListener('click', function() {
+            scale = 1;
+            image.style.transform = 'scale(1)';
+            image.style.left = '0';
+            image.style.top = '0';
+            pointX = 0;
+            pointY = 0;
+        });
+        
+        document.getElementById('fullscreen').addEventListener('click', function() {
+            if (container.requestFullscreen) {
+                container.requestFullscreen();
+            } else if (container.webkitRequestFullscreen) {
+                container.webkitRequestFullscreen();
+            } else if (container.msRequestFullscreen) {
+                container.msRequestFullscreen();
+            }
+        });
+        
+        container.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            panning = true;
+            start = { x: e.clientX - pointX, y: e.clientY - pointY };
+            container.style.cursor = 'grabbing';
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (!panning) return;
+            pointX = e.clientX - start.x;
+            pointY = e.clientY - start.y;
+            image.style.left = `${pointX}px`;
+            image.style.top = `${pointY}px`;
+        });
+        
+        document.addEventListener('mouseup', function() {
+            panning = false;
+            container.style.cursor = 'grab';
+        });
+        
+        document.getElementById('edit-sql-btn').addEventListener('click', function() {
+            document.getElementById('edit-form').submit();
+        });
+        
+        document.querySelector('.share-btn').addEventListener('click', function() {
+            navigator.clipboard.writeText(window.location.href)
+                .then(() => alert('Link copied to clipboard!'))
+                .catch(err => console.error('Could not copy text: ', err));
+        });
+    });
+</script>
+{% endblock %}
