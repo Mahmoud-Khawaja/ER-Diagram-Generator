@@ -15,7 +15,7 @@ def index():
     if request.method == 'POST':
         sql_text = request.form.get('sql_text')
         if not sql_text:
-            flash('are you gay or smthn? pass the sql code', 'error')
+            flash('pass the sql code', 'error')
             return redirect(url_for('index'))
         
         orientation = request.form.get('orientation', 'LR')
